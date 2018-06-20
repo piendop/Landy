@@ -1,0 +1,2 @@
+https://stackoverflow.com/questions/27588965/how-to-use-custom-font-in-a-project-written-in-android-studio
+https://stackoverflow.com/questions/10718789/how-to-press-back-button-in-android-programmatically
