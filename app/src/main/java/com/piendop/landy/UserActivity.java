@@ -107,24 +107,20 @@ public class UserActivity extends AppCompatActivity {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
                                 //remove places and locations
-                                final String address = places.get(i);
-                                //get current user
-                                ParseUser user = ParseUser.getCurrentUser();
-                                ParseRelation<ParseObject> relation = user.getRelation("places");
-                                ParseQuery<ParseObject> query=relation.getQuery();
+                                final String address = places.get(indexDeleted);
+                                ParseQuery<ParseObject> query= ParseQuery.getQuery("Places");
+                                query.whereEqualTo("userId",ParseUser.getCurrentUser().getObjectId());
                                 query.findInBackground(new FindCallback<ParseObject>() {
                                     @Override
                                     public void done(List<ParseObject> objects, ParseException e) {
-                                        if(e==null){
-                                            if(objects.size()>0){
-                                                for(ParseObject object:objects){
-                                                    if(object.getString("address").equals(address)){
-                                                        object.deleteInBackground();
-                                                        places.remove(indexDeleted);
-                                                        //update changes in data in array adapter
-                                                        arrayAdapter.notifyDataSetChanged();
-                                                        break;
-                                                    }
+                                        if(e==null&&objects.size()>0){
+                                            for(ParseObject object:objects){
+                                                if(object.getString("address").equals(address)){
+                                                    object.deleteInBackground();
+                                                    places.remove(indexDeleted);
+                                                    //update changes in data in array adapter
+                                                    arrayAdapter.notifyDataSetChanged();
+                                                    break;
                                                 }
                                             }
                                         }
@@ -145,7 +141,7 @@ public class UserActivity extends AppCompatActivity {
         places.removeAll(places);
         places.add("Add a new place...");
         //get current user
-        ParseUser user = ParseUser.getCurrentUser();
+        /*ParseUser user = ParseUser.getCurrentUser();
         ParseRelation<ParseObject> relation = user.getRelation("places");
         ParseQuery<ParseObject> query=relation.getQuery();
         query.findInBackground(new FindCallback<ParseObject>() {
@@ -160,6 +156,20 @@ public class UserActivity extends AppCompatActivity {
                             places.add(object.getString("address"));
                             arrayAdapter.notifyDataSetChanged();
                         }
+                    }
+                }
+            }
+        });*/
+
+        ParseQuery<ParseObject> query= ParseQuery.getQuery("Places");
+        query.whereEqualTo("userId",ParseUser.getCurrentUser().getObjectId());
+        query.findInBackground(new FindCallback<ParseObject>() {
+            @Override
+            public void done(List<ParseObject> objects, ParseException e) {
+                if(e==null&&objects.size()>0){
+                    for(ParseObject object:objects){
+                        places.add(object.getString("address"));
+                        arrayAdapter.notifyDataSetChanged();
                     }
                 }
             }
@@ -190,7 +200,7 @@ public class UserActivity extends AppCompatActivity {
                 else{
                     final String address = places.get(i);
                     //get current user
-                    ParseUser user = ParseUser.getCurrentUser();
+                    /*ParseUser user = ParseUser.getCurrentUser();
                     ParseRelation<ParseObject> relation = user.getRelation("places");
                     ParseQuery<ParseObject> query=relation.getQuery();
                     query.findInBackground(new FindCallback<ParseObject>() {
@@ -208,6 +218,24 @@ public class UserActivity extends AppCompatActivity {
                                     intent.putExtra("index",objectId);
                                     startActivity(intent);
                                 }
+                            }
+                        }
+                    });*/
+                    ParseQuery<ParseObject> query= ParseQuery.getQuery("Places");
+                    query.whereEqualTo("userId",ParseUser.getCurrentUser().getObjectId());
+                    query.findInBackground(new FindCallback<ParseObject>() {
+                        @Override
+                        public void done(List<ParseObject> objects, ParseException e) {
+                            if(e==null&&objects.size()>0){
+                                String objectId="";
+                                for(ParseObject object:objects){
+                                    if(object.getString("address").equals(address)){
+                                        objectId=object.getObjectId();
+                                        break;
+                                    }
+                                }
+                                intent.putExtra("index",objectId);
+                                startActivity(intent);
                             }
                         }
                     });

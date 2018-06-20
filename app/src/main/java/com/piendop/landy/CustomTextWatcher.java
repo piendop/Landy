@@ -41,113 +41,14 @@ public class CustomTextWatcher implements TextWatcher{
 
     @Override
     public void afterTextChanged(Editable editable) {
-        /*ParseUser user = ParseUser.getCurrentUser();
-        Log.i("Username",user.getUsername());
-        final ParseRelation<ParseObject> relationUser = user.getRelation("reviews");
-        relationUser.getQuery().findInBackground(new FindCallback<ParseObject>() {
-            @Override
-            public void done(final List<ParseObject> objectUsers, ParseException e) {
-                if(e==null && objectUsers.size()>0){
-                    for(ParseObject objectUser : objectUsers){
-                        ++countUser;
-                        final String userId = objectUser.getObjectId();
-                        ParseQuery<ParseObject> query =  ParseQuery.getQuery("Places");
-                        query.setLimit(1);
-                        query.getInBackground(objectId, new GetCallback<ParseObject>() {
-                            @Override
-                            public void done(final ParseObject objectPlace, ParseException e) {
-                                if(e==null && objectPlace!=null){
-                                    final ParseRelation<ParseObject> relationPlace = objectPlace.getRelation("reviews");
-                                    if(relationPlace==null){
-                                        Log.i("Jump","Here");
-                                    }
-                                    relationPlace.getQuery().findInBackground(new FindCallback<ParseObject>() {
-                                        @Override
-                                        public void done(List<ParseObject> objectPlaces, ParseException e) {
-                                            if(e==null && objectPlaces.size()>0){
-                                                for(ParseObject object:objectPlaces){
-                                                    String placeId=object.getObjectId();
-                                                    if(userId.equals(placeId)){
-                                                        reviewId=userId;
-                                                        break;
-                                                    }
-                                                }
-                                                if(!reviewId.isEmpty()){//mean update review
-                                                    ParseQuery<ParseObject> queryReview = ParseQuery.getQuery("Review");
-                                                    queryReview.setLimit(1);
-                                                    queryReview.getInBackground(reviewId, new GetCallback<ParseObject>() {
-                                                        @Override
-                                                        public void done(ParseObject object, ParseException e) {
-                                                            if(e==null){
-                                                                object.put("reviewText",text);
-                                                                Log.i("Update","Successful");
-                                                            }
-                                                        }
-                                                    });
-
-                                                }else if(countUser>=objectUsers.size()){//means new review
-                                                    ParseObject review = new ParseObject("Review");
-                                                    review.put("reviewText",text);
-                                                    review.saveInBackground(new SaveCallback() {
-                                                        @Override
-                                                        public void done(ParseException e) {
-                                                            if(e==null){
-                                                                Log.i("Create","Successful");
-                                                            }
-                                                        }
-                                                    });
-                                                    relationUser.add(review);
-                                                    relationPlace.add(review);
-                                                    objectPlace.saveInBackground(new SaveCallback() {
-                                                        @Override
-                                                        public void done(ParseException e) {
-                                                            if(e==null){
-                                                                Log.i("Save relation to Place","Successful");
-                                                            }
-                                                        }
-                                                    });
-                                                }
-                                            }else{//no reviews in this place
-                                                ParseObject review = new ParseObject("Review");
-                                                review.put("reviewText",text);
-                                                review.saveInBackground(new SaveCallback() {
-                                                    @Override
-                                                    public void done(ParseException e) {
-                                                        if(e==null){
-                                                            Log.i("Create","Successful");
-                                                        }
-                                                    }
-                                                });
-                                                relationUser.add(review);
-                                                relationPlace.add(review);
-                                                objectPlace.saveInBackground(new SaveCallback() {
-                                                    @Override
-                                                    public void done(ParseException e) {
-                                                        if(e==null){
-                                                            Log.i("Save relation to Place","Successful");
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-        });*/
-
         //get object user and its relation review
-        /*ParseUser user = ParseUser.getCurrentUser();
-        final ParseRelation<ParseObject> relationUser = user.getRelation("reviews");
+        /*final ParseRelation<ParseObject> relationUser = user.getRelation("reviews");
 
         //get object place
         ParseQuery<ParseObject> query =  ParseQuery.getQuery("Places");
         query.setLimit(1);
         try {
-            final ParseObject objectPlace = query.getFirst();
+            final ParseObject objectPlace = query.get(objectId);
             if(objectPlace!=null) {
                 //get relation reviews of object place
                 final ParseRelation<ParseObject> relationPlace = objectPlace.getRelation("reviews");
@@ -156,7 +57,7 @@ public class CustomTextWatcher implements TextWatcher{
                     public void done(List<ParseObject> objectPlaces, ParseException e) {
                         if (e == null && objectPlaces.size() > 0) {
                             for (ParseObject object : objectPlaces) {
-                                ++countUser;
+                                isReviewEmpty=true;
                                 final String placeId = object.getObjectId();
                                 //get User object to compare
                                 relationUser.getQuery().findInBackground(new FindCallback<ParseObject>() {
@@ -166,23 +67,76 @@ public class CustomTextWatcher implements TextWatcher{
                                             String userId = objectUser.getObjectId();
                                             if (userId.equals(placeId)) {//if there is one review id in two objects user and place break
                                                 reviewId = userId;
+
+                                                //find the text in parse
+                                                ParseQuery<ParseObject> query1 = ParseQuery.getQuery("Review");
+                                                query1.setLimit(1);
+                                                query1.getInBackground(reviewId, new GetCallback<ParseObject>() {
+                                                    @Override
+                                                    public void done(ParseObject object, ParseException e) {
+                                                        if(e==null){
+                                                            //set text review to edit text
+                                                            EditText editText = findViewById(R.id.reviewEditText);
+                                                            editText.setText(object.get("reviewText").toString());
+                                                            object.put("reviewText", text);
+                                                            Log.i("Update", "Successful");
+                                                            object.saveInBackground(new SaveCallback() {
+                                                                @Override
+                                                                public void done(ParseException e) {
+                                                                    if(e==null){
+                                                                        Log.i("Save update","Successful");
+                                                                    }
+                                                                }
+                                                            });
+                                                            user.saveInBackground(new SaveCallback() {
+                                                                @Override
+                                                                public void done(ParseException e) {
+                                                                    if(e==null)
+                                                                        Log.i("Save relation to user","Successful");
+                                                                    objectPlace.saveInBackground(new SaveCallback() {
+                                                                        @Override
+                                                                        public void done(ParseException e) {
+                                                                            if(e==null)
+                                                                                Log.i("Save relation to place","Successful");
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
+                                                            objectPlace.saveInBackground(new SaveCallback() {
+                                                                @Override
+                                                                public void done(ParseException e) {
+                                                                    if(e==null)
+                                                                        Log.i("Save relation to place","Successful");
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+                                                });
                                                 break;
                                             }
                                         }
                                         if (!reviewId.isEmpty()) {//mean update review
+                                            reviewId="";
                                             ParseQuery<ParseObject> queryReview = ParseQuery.getQuery("Review");
                                             queryReview.setLimit(1);
                                             queryReview.getInBackground(reviewId, new GetCallback<ParseObject>() {
                                                 @Override
                                                 public void done(ParseObject object, ParseException e) {
                                                     if (e == null) {
-                                                        object.put("reviewText", text);
-                                                        Log.i("Update", "Successful");
+
+                                                        objectPlace.saveInBackground(new SaveCallback() {
+                                                            @Override
+                                                            public void done(ParseException e) {
+                                                                if (e == null) {
+                                                                    Log.i("Save relation to Place", "Successful");
+                                                                }
+                                                            }
+                                                        });
                                                     }
                                                 }
                                             });
 
-                                        } else if (countUser >= 1) {//mean new review ==> create new object
+                                        } if (reviewId.isEmpty()) {//mean new review ==> create new object
                                             ParseObject review = new ParseObject("Review");
                                             review.put("reviewText", text);
                                             review.saveInBackground(new SaveCallback() {
@@ -195,6 +149,27 @@ public class CustomTextWatcher implements TextWatcher{
                                             });
                                             relationUser.add(review);
                                             relationPlace.add(review);
+                                            user.saveInBackground(new SaveCallback() {
+                                                @Override
+                                                public void done(ParseException e) {
+                                                    if(e==null)
+                                                        Log.i("Save relation to user","Successful");
+                                                    objectPlace.saveInBackground(new SaveCallback() {
+                                                        @Override
+                                                        public void done(ParseException e) {
+                                                            if(e==null)
+                                                                Log.i("Save relation to place","Successful");
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                            objectPlace.saveInBackground(new SaveCallback() {
+                                                @Override
+                                                public void done(ParseException e) {
+                                                    if(e==null)
+                                                        Log.i("Save relation to place","Successful");
+                                                }
+                                            });
                                             objectPlace.saveInBackground(new SaveCallback() {
                                                 @Override
                                                 public void done(ParseException e) {
@@ -203,7 +178,8 @@ public class CustomTextWatcher implements TextWatcher{
                                                     }
                                                 }
                                             });
-                                        }
+                                            //isReviewEmpty=false;//set up false again for a new activity
+                                        }else   reviewId="";
                                     }
                                 });
                             }
@@ -220,123 +196,61 @@ public class CustomTextWatcher implements TextWatcher{
                             });
                             relationUser.add(review);
                             relationPlace.add(review);
+                            user.saveInBackground(new SaveCallback() {
+                                @Override
+                                public void done(ParseException e) {
+                                    if(e==null)
+                                        Log.i("Save relation to user","Successful");
+                                    objectPlace.saveInBackground(new SaveCallback() {
+                                        @Override
+                                        public void done(ParseException e) {
+                                            if(e==null)
+                                                Log.i("Save relation to place","Successful");
+                                        }
+                                    });
+                                }
+                            });
                             objectPlace.saveInBackground(new SaveCallback() {
                                 @Override
                                 public void done(ParseException e) {
+                                    if(e==null) {
+                                        Log.i("Save relation to place", "Successful");
+                                        user.saveInBackground();
+                                    }
+                                }
+                            });
+                            /*user.saveInBackground(new SaveCallback() {
+                                @Override
+                                public void done(ParseException e) {
+                                    if(e==null){
+                                        Log.i("Save relation to user","Successful");
+                                        objectPlace.saveInBackground(new SaveCallback() {
+                                            @Override
+                                            public void done(ParseException e) {
+                                                if(e==null)
+                                                    Log.i("Save relation to Place", "Successful");
+                                            }
+                                        });
+                                    }
+                                }
+                            });*/
+                                /*objectPlace.saveInBackground(new SaveCallback() {
+                                @Override
+                                public void done(ParseException e) {
                                     if (e == null) {
-                                        Log.i("Save relation to Place", "Successful");
+                                        Log.i("Save relation to user","Successful");
                                     }
                                 }
                             });
                         }
                     }
-
                 });
+
             }
 
         }catch (ParseException e) {
             e.printStackTrace();
-        }
-        /*query.getInBackground(objectId, new GetCallback<ParseObject>() {
-                    @Override
-                    public void done(final ParseObject objectPlace, ParseException e) {
-                        //get object place
-                        if (e == null && objectPlace != null) {
-                            final ParseRelation<ParseObject> relationPlace = objectPlace.getRelation("reviews");
-                            relationPlace.getQuery().findInBackground(new FindCallback<ParseObject>() {
-                                @Override
-                                public void done(List<ParseObject> objectPlaces, ParseException e) {
-                                    if (e == null && objectPlaces.size() > 0) {
-                                        for (ParseObject object : objectPlaces) {
-                                            ++countUser;
-                                            final String placeId = object.getObjectId();
-                                            //get User object to compare
-                                            relationUser.getQuery().findInBackground(new FindCallback<ParseObject>() {
-                                                @Override
-                                                public void done(List<ParseObject> objectUsers, ParseException e) {
-                                                    for (ParseObject objectUser : objectUsers) {
-                                                        String userId = objectUser.getObjectId();
-                                                        if (userId.equals(placeId)) {//if there is one review id in two objects user and place break
-                                                            reviewId = userId;
-                                                            break;
-                                                        }
-                                                    }
-                                                    if (!reviewId.isEmpty()) {//mean update review
-                                                        ParseQuery<ParseObject> queryReview = ParseQuery.getQuery("Review");
-                                                        queryReview.setLimit(1);
-                                                        queryReview.getInBackground(reviewId, new GetCallback<ParseObject>() {
-                                                            @Override
-                                                            public void done(ParseObject object, ParseException e) {
-                                                                if (e == null) {
-                                                                    object.put("reviewText", text);
-                                                                    Log.i("Update", "Successful");
-                                                                }
-                                                            }
-                                                        });
-
-                                                    } else if (countUser >= 1) {//mean new review ==> create new object
-                                                        ParseObject review = new ParseObject("Review");
-                                                        review.put("reviewText", text);
-                                                        review.saveInBackground(new SaveCallback() {
-                                                            @Override
-                                                            public void done(ParseException e) {
-                                                                if (e == null) {
-                                                                    Log.i("Create", "Successful");
-                                                                }
-                                                            }
-                                                        });
-                                                        relationUser.add(review);
-                                                        relationPlace.add(review);
-                                                        objectPlace.saveInBackground(new SaveCallback() {
-                                                            @Override
-                                                            public void done(ParseException e) {
-                                                                if (e == null) {
-                                                                    Log.i("Save relation to Place", "Successful");
-                                                                }
-                                                            }
-                                                        });
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    } else if (objectPlaces.size() == 0) {//no reviews in this place
-                                        ParseObject review = new ParseObject("Review");
-                                        review.put("reviewText", text);
-                                        review.saveInBackground(new SaveCallback() {
-                                            @Override
-                                            public void done(ParseException e) {
-                                                if (e == null) {
-                                                    Log.i("Create", "Successful");
-                                                }
-                                            }
-                                        });
-                                        relationUser.add(review);
-                                        relationPlace.add(review);
-                                        objectPlace.saveInBackground(new SaveCallback() {
-                                            @Override
-                                            public void done(ParseException e) {
-                                                if (e == null) {
-                                                    Log.i("Save relation to Place", "Successful");
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-
-                            });
-
-                        }
-                    }
-                });*/
-        //finally save the relation
-        /*user.saveInBackground(new SaveCallback() {
-            @Override
-            public void done(ParseException e) {
-                if(e==null){
-                    Log.i("Save relation to user","Successful");
-                }
-            }
-        });*/
+        }*/
     }
 
 }

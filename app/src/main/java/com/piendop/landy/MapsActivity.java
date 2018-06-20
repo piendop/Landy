@@ -24,6 +24,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -90,7 +91,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 @Override
                 public void onLocationChanged(Location location) {
                     //zoom the user location
-                    centerUserLocation(location,"Your location");
+                    centerUserLocation(location,"Your location","your location");
                 }
 
                 @Override
@@ -109,6 +110,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
             };
 
+
             /*THE FIRST TIME TIME TIME OR THE NEXT TIME OPEN THE APP*/
             //so for the first time open the app we don't click anything so it must show marker in the previous location
             //ask user to allow get location
@@ -125,23 +127,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //startClick();
             }
         }else{//user click to see their favorite places
-            //get current user
-            ParseUser user = ParseUser.getCurrentUser();
-            ParseRelation<ParseObject> relation = user.getRelation("places");
-            ParseQuery<ParseObject> query=relation.getQuery();
-            query.getInBackground(index, new GetCallback<ParseObject>() {
+            //get current place
+            ParseQuery<ParseObject> query= ParseQuery.getQuery("Places");
+            query.whereEqualTo("objectId",index);
+            query.findInBackground(new FindCallback<ParseObject>() {
                 @Override
-                public void done(ParseObject object, ParseException e) {
-                    if(e==null){
-                        String address = object.getString("address");
-                        double lat= Double.parseDouble(object.getString("latitudes"));
-                        double lng=Double.parseDouble(object.getString("longitudes"));
-                        LatLng location = new LatLng(lat,lng);
-                        mMap.addMarker(new MarkerOptions().position(location).title(address)).setTag(index);
-                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(location,10));
+                public void done(List<ParseObject> objects, ParseException e) {
+                    if(e==null && objects.size()>0){
+                        String address = objects.get(0).getString("address");
+                        double lat= Double.parseDouble(objects.get(0).getString("latitudes"));
+                        double lng=Double.parseDouble(objects.get(0).getString("longitudes"));
+                        //LatLng location = new LatLng(lat,lng);
+                        Location location = new Location(locationManager.GPS_PROVIDER);
+                        location.setLatitude(lat);
+                        location.setLongitude(lng);
+                        centerUserLocation(location,address,index);
                     }
                 }
             });
+
+
         }
     }
 
@@ -165,12 +170,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     /***ZOOM USER LOCATION METHOD***/
-    public void centerUserLocation(Location location, String address){
+    public void centerUserLocation(Location location, String address,String tag){
         LatLng userLocation = new LatLng(location.getLatitude(),location.getLongitude());
-        //clear markers
-        mMap.clear();
-        mMap.addMarker(new MarkerOptions().position(userLocation).title(address)).setTag("your location");
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,10));
+        if(address!="Your location"){
+            //add marker for memorable places
+            mMap.addMarker(new MarkerOptions().position(userLocation).title(address)).setTag(tag);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,10));
+        }else{//your location case
+            //clear markers
+            mMap.addMarker(new MarkerOptions().position(userLocation).title(address).
+                    icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN)))
+                    .setTag(tag);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,10));
+        }
     }
 
     /**LONG CLICK TO LOCATIONS AND SAVE THEM**/
@@ -181,28 +193,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationManager.removeUpdates(locationListener);
         //get the address from click buttons
         String address = getAddress(latLng);
-        ParseUser user = ParseUser.getCurrentUser();
-        ParseRelation<ParseObject> relation = user.getRelation("places");
+        Intent intent = getIntent();
+        //if we change the location it will update for us
+        String index=intent.getStringExtra("index");
+        Location location = new Location(locationManager.GPS_PROVIDER);
+        location.setLatitude(latLng.latitude);
+        location.setLongitude(latLng.longitude);
 
         //save places to parse
-        savePlacesToParse(address,latLng,relation);
-
-        //finally save user
-        user.saveInBackground(new SaveCallback() {
-            @Override
-            public void done(ParseException e) {
-                if(e==null){
-                    Log.i("saveInBackgroundUser","successful");
-                }else{
-                    Log.i("saveInBackgroundUser","Failed. Error: "+e.toString());
-                }
-            }
-        });
+        savePlacesToParse(address,latLng,ParseUser.getCurrentUser().getObjectId());
+        centerUserLocation(location,address,index);
     }
 
     /***save places to parse object**/
-    private void savePlacesToParse(final String address, final LatLng latLng,
-                                   final ParseRelation<ParseObject> relation) {
+    private void savePlacesToParse(final String address, final LatLng latLng,final String index) {
         ParseQuery<ParseObject> query = ParseQuery.getQuery("Places");
                 query.findInBackground(new FindCallback<ParseObject>() {
             @Override
@@ -214,16 +218,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         boolean isExisted=false;
                         for(ParseObject object:objects){
                             //if we have a new location store to parse server
+                            String existId = object.getString("userId");
                             String existAddress = object.getString("address");
-                            if(existAddress.equals(address)){
+                            if(existId.equals(index)&&existAddress.equals("address")){
                                 isExisted=true;
+                                break;
                             }
                         }
-                        if(!isExisted){
+                        if(!isExisted){//new location
                             final ParseObject newPlaces = new ParseObject("Places");
                             newPlaces.put("address",address);
                             newPlaces.put("latitudes",Double.toString(latLng.latitude));
                             newPlaces.put("longitudes",Double.toString(latLng.longitude));
+                            newPlaces.put("userId",index);
                             newPlaces.saveInBackground(new SaveCallback() {
                                 @Override
                                 public void done(ParseException e) {
@@ -240,14 +247,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                     }
                                 }
                             });
-                            //then add relation
-                            relation.add(newPlaces);
+
                         }
                     }else {//no objects in places class
                         ParseObject newPlaces = new ParseObject("Places");
                         newPlaces.put("address",address);
                         newPlaces.put("latitudes",Double.toString(latLng.latitude));
                         newPlaces.put("longitudes",Double.toString(latLng.longitude));
+                        newPlaces.put("userId",index);
 
                         newPlaces.saveInBackground(new SaveCallback() {
                             @Override
@@ -259,8 +266,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                 }
                             }
                         });
-                        //then add relation
-                        relation.add(newPlaces);
                     }
                 }
             }
@@ -275,7 +280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //create a geocoder to get the address of clicked location
         Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
         //return address
-        String addressInfo="";
+        String addressInfo="Could not find the address in this place";
         //create a list address to store addresses of clicked location
         try {//use try catch to check if its created or not
             List<Address> addressList = geocoder.getFromLocation(latLng.latitude,latLng.longitude,1);
